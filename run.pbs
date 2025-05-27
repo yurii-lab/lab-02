@@ -20,9 +20,9 @@ cp "$SCRATCH_DIR/output_${PBS_ARRAYID}.txt"
 # Збирання статистики кожною 10-ю задачею
 if (( PBS_ARRAYID % 10 == 0 )); then
 echo "Задача $PBS_ARRAYID збирає статистику за
-$((PBS_ARRAYID-9))..$PBS_ARRAYID" >
+$((PBS_ARRAYID-8))..$PBS_ARRAYID" >
 "$SCRATCH_DIR/stat_${PBS_ARRAYID}.txt"
-for i in $(seq $((PBS_ARRAYID-9)) $PBS_ARRAYID); do
+for i in $(seq $((PBS_ARRAYID-8)) $PBS_ARRAYID); do
 cat "$HOME/mpi_outputs/output_${i}.txt" >>
 "$SCRATCH_DIR/stat_${PBS_ARRAYID}.txt"
 done
