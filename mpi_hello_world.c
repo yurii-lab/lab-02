@@ -2,25 +2,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 int main(int argc, char** argv) {
-    MPI_Init(NULL, NULL);
+    MPI_Init(&argc, &argv);
 
-    int world_size;
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    int rank, size, len;
+    char hostname[MPI_MAX_PROCESSOR_NAME];
 
-    int world_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Get_processor_name(hostname, &len);
 
-    char processor_name[MPI_MAX_PROCESSOR_NAME];
-    int name_len;
-    MPI_Get_processor_name(processor_name, &name_len);
+    printf("Rank %d of %d running on %s\n", rank, size, hostname);
+    fflush(stdout);
 
-    char filename[256];
-    snprintf(filename, sizeof(filename), "/tmp/mpi_stat_%s_%d.txt", processor_name, world_rank);
-    FILE* fp = fopen(filename, "w");
-    if (fp != NULL) {
-        fprintf(fp, "Rank %d of %d on processor %s\n", world_rank, world_size, processor_name);
+    if (rank == 0) {
+        FILE* fp = fopen("/home/your_username/mpi_outpus/temp_stat.txt", "a");
+        if (fp == NULL) {
+            perror("Unable to open stats file");
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+        fprintf(fp, "Job run by %d processes:\n", size);
+        for (int i = 0; i < size; i++) {
+            fprintf(fp, "Process %d on %s\n", i, hostname); 
+        }
         fclose(fp);
     }
 
