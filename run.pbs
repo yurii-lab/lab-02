@@ -1,43 +1,32 @@
 #!/bin/bash
-#PBS -N mpi_array
+#PBS -N mpi_chain
 #PBS -t 1-100
 #PBS -l nodes=2:ppn=2
 #PBS -l walltime=00:05:00
 #PBS -j oe
+#PBS -W stagein=stat_prev.txt@hostname:/home/$USER/mpi_chain/stat_${PBS_ARRAYID}_prev.txt
+
 cd $PBS_O_WORKDIR
 ml icc
 ml openmpi
 
-# Створення унікальної директорії на локальному вузлі
-SCRATCH_DIR="/tmp/${USER}_job_${PBS_ARRAYID}"
+SCRATCH_DIR="/tmp/${USER}_chain_${PBS_ARRAYID}"
 mkdir -p "$SCRATCH_DIR"
+
 # Запуск MPI-програми
-mpirun -np 4 -hostfile $PBS_NODEFILE ./hello >
-"$SCRATCH_DIR/output_${PBS_ARRAYID}.txt"
-# Копіювання в домашню директорію
-cp "$SCRATCH_DIR/output_${PBS_ARRAYID}.txt"
-"$HOME/mpi_outputs/"
-# Збирання статистики кожною 10-ю задачею
-if (( PBS_ARRAYID % 10 == 0 )); then
-echo "Задача $PBS_ARRAYID збирає статистику за
-$((PBS_ARRAYID-8))..$PBS_ARRAYID" >
-"$SCRATCH_DIR/stat_${PBS_ARRAYID}.txt"
-for i in $(seq $((PBS_ARRAYID-8)) $PBS_ARRAYID); do
-cat "$HOME/mpi_outputs/output_${i}.txt" >>
-"$SCRATCH_DIR/stat_${PBS_ARRAYID}.txt"
-done
-cp "$SCRATCH_DIR/stat_${PBS_ARRAYID}.txt"
-"$HOME/mpi_outputs/"
+mpirun -np 4 -hostfile $PBS_NODEFILE ./hello
+
+# Збирання локальної статистики
+STAT_FILE="$SCRATCH_DIR/stat_local_${PBS_ARRAYID}.txt"
+cat /tmp/mpi_stat_* > "$STAT_FILE"
+
+# Додавання попередньої статистики, якщо є
+if [ -f stat_prev.txt ]; then
+    cat stat_prev.txt >> "$STAT_FILE"
 fi
-# Задача №1 збирає всю статистику
-if (( PBS_ARRAYID == 1 )); then
-echo "Задача 1 збирає всю статистику:" >
-"$SCRATCH_DIR/final_stat.txt"
-for i in $(seq 10 10 100); do
-while [ ! -f "$HOME/mpi_outputs/stat_${i}.txt" ]; do
-sleep 1
-done
-cat "$HOME/mpi_outputs/stat_${i}.txt" >>
-"$SCRATCH_DIR/final_stat.txt"
-done
-cp "$S
+
+# Зберігання об'єднаної статистики в домашній директорії
+cp "$STAT_FILE" "$HOME/mpi_chain/stat_${PBS_ARRAYID}.txt"
+
+# Підготовка для наступної задачі
+cp "$STAT_FILE" "$HOME/mpi_chain/stat_$((PBS_ARRAYID+1))_prev.txt"
